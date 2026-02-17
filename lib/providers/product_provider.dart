@@ -149,4 +149,20 @@ class ProductProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<bool> deleteProduct(String id) async {
+    try {
+      final response = await _dioClient.dio.delete('/products/$id');
+
+      if (response.statusCode == 200) {
+        _products.removeWhere((p) => p.id == id);
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('Error deleting product: $e');
+      return false;
+    }
+  }
 }
