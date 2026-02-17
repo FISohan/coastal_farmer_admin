@@ -7,8 +7,15 @@ import '../models/product.dart';
 
 class ProductForm extends StatefulWidget {
   final Function(Product, XFile?) onSubmit;
+  final bool isLoading;
+  final Product? product;
 
-  const ProductForm({super.key, required this.onSubmit});
+  const ProductForm({
+    super.key,
+    required this.onSubmit,
+    this.isLoading = false,
+    this.product,
+  });
 
   @override
   State<ProductForm> createState() => _ProductFormState();
@@ -16,18 +23,37 @@ class ProductForm extends StatefulWidget {
 
 class _ProductFormState extends State<ProductForm> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _categoryController = TextEditingController();
-  final _stockController = TextEditingController(text: '0');
-  final _unitController = TextEditingController(text: 'kg');
-  final _discountController = TextEditingController(text: '0');
-  final _originalPriceController = TextEditingController(text: '0');
+  late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _priceController;
+  late final TextEditingController _categoryController;
+  late final TextEditingController _stockController;
+  late final TextEditingController _unitController;
+  late final TextEditingController _discountController;
+  late final TextEditingController _originalPriceController;
 
   bool _isPublic = false;
   XFile? _selectedImage;
   final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.product;
+    _nameController = TextEditingController(text: p?.name ?? '');
+    _descriptionController = TextEditingController(text: p?.description ?? '');
+    _priceController = TextEditingController(text: p?.price.toString() ?? '');
+    _categoryController = TextEditingController(text: p?.category ?? '');
+    _stockController = TextEditingController(text: p?.stock.toString() ?? '0');
+    _unitController = TextEditingController(text: p?.unit ?? 'kg');
+    _discountController = TextEditingController(
+      text: p?.discount.toString() ?? '0',
+    );
+    _originalPriceController = TextEditingController(
+      text: p?.originalPrice.toString() ?? '0',
+    );
+    _isPublic = p?.isPublic ?? false;
+  }
 
   @override
   void dispose() {
@@ -52,8 +78,10 @@ class _ProductFormState extends State<ProductForm> {
   }
 
   void _submit() {
+    if (widget.isLoading) return;
+
     if (_formKey.currentState!.validate()) {
-      if (_selectedImage == null) {
+      if (_selectedImage == null && (widget.product?.image.isEmpty ?? true)) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Please select an image')));
@@ -65,7 +93,7 @@ class _ProductFormState extends State<ProductForm> {
         description: _descriptionController.text,
         price: double.parse(_priceController.text),
         category: _categoryController.text,
-        stock: int.parse(_stockController.text),
+        stock: double.parse(_stockController.text),
         unit: _unitController.text,
         image: '', // Will be handled by upload service
         discount: double.parse(_discountController.text),
@@ -97,17 +125,28 @@ class _ProductFormState extends State<ProductForm> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey[400]!),
                 ),
-                child: _selectedImage != null
+                child:
+                    _selectedImage != null ||
+                        (widget.product?.image.isNotEmpty ?? false)
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: kIsWeb
-                            ? Image.network(
-                                _selectedImage!.path,
+                        child: _selectedImage != null
+                            ? (kIsWeb
+                                  ? Image.network(
+                                      _selectedImage!.path,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Image.file(
+                                      File(_selectedImage!.path),
+                                      fit: BoxFit.cover,
+                                    ))
+                            : Image.network(
+                                widget.product!.image,
                                 fit: BoxFit.cover,
-                              )
-                            : Image.file(
-                                File(_selectedImage!.path),
-                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Center(
+                                      child: Icon(Icons.broken_image),
+                                    ),
                               ),
                       )
                     : const Column(
@@ -128,20 +167,14 @@ class _ProductFormState extends State<ProductForm> {
             // Basic Info
             TextFormField(
               controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Product Name',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Product Name'),
               validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
             ),
             const SizedBox(height: 16),
 
             TextFormField(
               controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Description'),
               maxLines: 3,
               validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
             ),
@@ -152,10 +185,7 @@ class _ProductFormState extends State<ProductForm> {
                 Expanded(
                   child: TextFormField(
                     controller: _priceController,
-                    decoration: const InputDecoration(
-                      labelText: 'Price',
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: const InputDecoration(labelText: 'Price'),
                     keyboardType: TextInputType.number,
                     validator: (value) =>
                         value?.isEmpty ?? true ? 'Required' : null,
@@ -167,7 +197,6 @@ class _ProductFormState extends State<ProductForm> {
                     controller: _originalPriceController,
                     decoration: const InputDecoration(
                       labelText: 'Original Price',
-                      border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.number,
                   ),
@@ -181,10 +210,7 @@ class _ProductFormState extends State<ProductForm> {
                 Expanded(
                   child: TextFormField(
                     controller: _categoryController,
-                    decoration: const InputDecoration(
-                      labelText: 'Category',
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: const InputDecoration(labelText: 'Category'),
                     validator: (value) =>
                         value?.isEmpty ?? true ? 'Required' : null,
                   ),
@@ -195,7 +221,6 @@ class _ProductFormState extends State<ProductForm> {
                     controller: _unitController,
                     decoration: const InputDecoration(
                       labelText: 'Unit (e.g. kg, pcs)',
-                      border: OutlineInputBorder(),
                     ),
                   ),
                 ),
@@ -208,10 +233,7 @@ class _ProductFormState extends State<ProductForm> {
                 Expanded(
                   child: TextFormField(
                     controller: _stockController,
-                    decoration: const InputDecoration(
-                      labelText: 'Stock',
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: const InputDecoration(labelText: 'Stock'),
                     keyboardType: TextInputType.number,
                   ),
                 ),
@@ -219,10 +241,7 @@ class _ProductFormState extends State<ProductForm> {
                 Expanded(
                   child: TextFormField(
                     controller: _discountController,
-                    decoration: const InputDecoration(
-                      labelText: 'Discount %',
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: const InputDecoration(labelText: 'Discount %'),
                     keyboardType: TextInputType.number,
                   ),
                 ),
@@ -242,8 +261,17 @@ class _ProductFormState extends State<ProductForm> {
               width: double.infinity,
               height: 50,
               child: FilledButton(
-                onPressed: _submit,
-                child: const Text('Save Product'),
+                onPressed: widget.isLoading ? null : _submit,
+                child: widget.isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Save Product'),
               ),
             ),
           ],

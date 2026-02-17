@@ -4,7 +4,7 @@ class Product {
   final String description;
   final double price;
   final String category;
-  final int stock;
+  final double stock;
   final String unit;
   final String image;
   final double discount;
@@ -32,7 +32,7 @@ class Product {
       description: json['description'],
       price: (json['price'] as num).toDouble(),
       category: json['category'],
-      stock: json['stock'] ?? 0,
+      stock: (json['stock'] as num?)?.toDouble() ?? 0,
       unit: json['unit'] ?? 'kg',
       image: json['image'],
       discount: (json['discount'] as num?)?.toDouble() ?? 0,

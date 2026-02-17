@@ -11,7 +11,9 @@ class ProductProvider extends ChangeNotifier {
   List<Product> _products = [];
   bool _isLoading = false;
 
-  ProductProvider(this._dioClient, this._imageUploadService);
+  ProductProvider(this._dioClient, this._imageUploadService) {
+    fetchProducts();
+  }
 
   List<Product> get products => _products;
   bool get isLoading => _isLoading;
@@ -81,6 +83,66 @@ class ProductProvider extends ChangeNotifier {
       return false;
     } catch (e) {
       print('Error adding product: $e');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> updateProduct(
+    String id,
+    Product product,
+    XFile? imageFile,
+  ) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      String imageUrl = product.image;
+
+      // Upload image if provided
+      if (imageFile != null) {
+        final uploadedUrl = await _imageUploadService.uploadImage(imageFile);
+        if (uploadedUrl != null) {
+          imageUrl = uploadedUrl;
+        } else {
+          print('Image upload failed');
+          return false;
+        }
+      }
+
+      final updatedProduct = Product(
+        id: id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        category: product.category,
+        stock: product.stock,
+        unit: product.unit,
+        image: imageUrl,
+        discount: product.discount,
+        originalPrice: product.originalPrice,
+        isPublic: product.isPublic,
+      );
+
+      final response = await _dioClient.dio.put(
+        '/products/$id',
+        data: updatedProduct.toJson(),
+      );
+
+      if (response.statusCode == 200) {
+        final updated = Product.fromJson(response.data);
+        final index = _products.indexWhere((p) => p.id == id);
+        if (index != -1) {
+          _products[index] = updated;
+        }
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('Error updating product: $e');
       return false;
     } finally {
       _isLoading = false;

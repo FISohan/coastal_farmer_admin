@@ -15,9 +15,11 @@ class ImageUploadService {
       String fileName = imageFile.name;
       String? mimeType = lookupMimeType(imageFile.path) ?? 'image/jpeg';
 
+      final bytes = await imageFile.readAsBytes();
+
       FormData formData = FormData.fromMap({
-        'image': await MultipartFile.fromFile(
-          imageFile.path,
+        'image': MultipartFile.fromBytes(
+          bytes,
           filename: fileName,
           contentType: MediaType.parse(mimeType),
         ),
