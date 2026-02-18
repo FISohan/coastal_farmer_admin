@@ -6,29 +6,21 @@ import 'providers/auth_provider.dart';
 import 'services/dio_client.dart';
 import 'services/image_upload_service.dart';
 import 'providers/product_provider.dart';
-import 'services/isar_service.dart';
 import 'providers/order_provider.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  final isarService = IsarService();
-  await isarService.init();
-
-  runApp(CoastalFarmerAdminApp(isarService: isarService));
+  runApp(const CoastalFarmerAdminApp());
 }
 
 class CoastalFarmerAdminApp extends StatelessWidget {
-  final IsarService isarService;
-
-  const CoastalFarmerAdminApp({super.key, required this.isarService});
+  const CoastalFarmerAdminApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         Provider(create: (_) => DioClient()),
-        Provider.value(value: isarService),
         ProxyProvider<DioClient, ImageUploadService>(
           update: (_, dioClient, __) => ImageUploadService(dioClient),
         ),
@@ -47,9 +39,7 @@ class CoastalFarmerAdminApp extends StatelessWidget {
           update: (_, dioClient, imageUploadService, previous) =>
               previous ?? ProductProvider(dioClient, imageUploadService),
         ),
-        ChangeNotifierProvider(
-          create: (context) => OrderProvider(context.read<IsarService>()),
-        ),
+        ChangeNotifierProvider(create: (_) => OrderProvider()),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {

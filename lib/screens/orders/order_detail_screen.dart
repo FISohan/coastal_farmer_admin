@@ -1,13 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
 import '../../models/order.dart';
 import '../../providers/order_provider.dart';
+import '../../services/invoice_service.dart';
 import 'package:provider/provider.dart';
 
-class OrderDetailScreen extends StatelessWidget {
+class OrderDetailScreen extends StatefulWidget {
   final CustomerOrder order;
 
   const OrderDetailScreen({super.key, required this.order});
+
+  @override
+  State<OrderDetailScreen> createState() => _OrderDetailScreenState();
+}
+
+class _OrderDetailScreenState extends State<OrderDetailScreen> {
+  bool _printerAvailable = false;
+  bool _checkingPrinter = true;
+
+  CustomerOrder get order => widget.order;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPrinterStatus();
+  }
+
+  Future<void> _checkPrinterStatus() async {
+    try {
+      final info = await Printing.info();
+      if (mounted) {
+        setState(() {
+          _printerAvailable = info.canPrint;
+          _checkingPrinter = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _printerAvailable = false;
+          _checkingPrinter = false;
+        });
+      }
+    }
+  }
 
   Color _statusColor(OrderStatus status, ColorScheme cs) {
     switch (status) {
@@ -44,6 +81,11 @@ class OrderDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text('Order #${order.id}'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.print_outlined),
+            tooltip: 'Print Invoice',
+            onPressed: () => InvoiceService.printInvoice(order),
+          ),
           PopupMenuButton<String>(
             onSelected: (value) async {
               if (value == 'delete') {
@@ -93,6 +135,100 @@ class OrderDetailScreen extends StatelessWidget {
             ],
           ),
         ],
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          border: Border(
+            top: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.3)),
+          ),
+        ),
+        child: SafeArea(
+          child: Row(
+            children: [
+              // Printer status indicator
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: _checkingPrinter
+                      ? colorScheme.surfaceContainerHighest
+                      : _printerAvailable
+                      ? const Color(0xFFE8F5E9)
+                      : const Color(0xFFFFEBEE),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: _checkingPrinter
+                        ? colorScheme.outlineVariant
+                        : _printerAvailable
+                        ? const Color(0xFF2E7D32).withOpacity(0.3)
+                        : colorScheme.error.withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_checkingPrinter)
+                      SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      )
+                    else
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _printerAvailable
+                              ? const Color(0xFF2E7D32)
+                              : colorScheme.error,
+                        ),
+                      ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _checkingPrinter
+                          ? 'Checking...'
+                          : _printerAvailable
+                          ? 'Printer ready'
+                          : 'No printer',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: _checkingPrinter
+                            ? colorScheme.onSurfaceVariant
+                            : _printerAvailable
+                            ? const Color(0xFF2E7D32)
+                            : colorScheme.error,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Print button
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: FilledButton.icon(
+                    onPressed: () => InvoiceService.printInvoice(order),
+                    icon: const Icon(Icons.print),
+                    label: const Text(
+                      'Print Invoice',
+                      style: TextStyle(fontSize: 15),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -233,9 +369,9 @@ class OrderDetailScreen extends StatelessWidget {
                       leading: CircleAvatar(
                         backgroundColor: colorScheme.primaryContainer,
                         child: Text(
-                          (item.productName ?? '?')
-                              .substring(0, 1)
-                              .toUpperCase(),
+                          item.productName.isNotEmpty
+                              ? item.productName.substring(0, 1).toUpperCase()
+                              : '?',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: colorScheme.onPrimaryContainer,
@@ -243,11 +379,11 @@ class OrderDetailScreen extends StatelessWidget {
                         ),
                       ),
                       title: Text(
-                        item.productName ?? 'Unknown',
+                        item.productName,
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                       subtitle: Text(
-                        '৳${(item.unitPrice ?? 0).toStringAsFixed(0)} × ${(item.quantity ?? 0).toStringAsFixed(0)}',
+                        '৳${item.unitPrice.toStringAsFixed(0)} × ${item.quantity.toStringAsFixed(0)}',
                       ),
                       trailing: Text(
                         '৳${item.totalPrice.toStringAsFixed(0)}',

@@ -21,6 +21,7 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
 
   final List<_OrderItemEntry> _items = [];
   bool _isSaving = false;
+  OrderType _orderType = OrderType.offline;
 
   @override
   void dispose() {
@@ -182,6 +183,7 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
     setState(() => _isSaving = true);
 
     final order = CustomerOrder()
+      ..orderType = _orderType
       ..customerName = _nameController.text.trim()
       ..customerPhone = _phoneController.text.trim()
       ..customerAddress = _addressController.text.trim()
@@ -264,6 +266,47 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
                 vertical: 20,
               ),
               children: [
+                // ── Order Type Toggle ──
+                _SectionHeader(
+                  icon: Icons.category_outlined,
+                  title: 'Order Type',
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<OrderType>(
+                    segments: const [
+                      ButtonSegment(
+                        value: OrderType.offline,
+                        label: Text('Offline'),
+                        icon: Icon(Icons.storefront_outlined),
+                      ),
+                      ButtonSegment(
+                        value: OrderType.online,
+                        label: Text('Online'),
+                        icon: Icon(Icons.language),
+                      ),
+                    ],
+                    selected: {_orderType},
+                    onSelectionChanged: (value) {
+                      setState(() => _orderType = value.first);
+                    },
+                  ),
+                ),
+                if (_orderType == OrderType.offline)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Customer info is optional for offline orders',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+
+                const SizedBox(height: 24),
+
                 // ── Customer Info Section ──
                 _SectionHeader(
                   icon: Icons.person_outline,
@@ -282,12 +325,19 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
                                   Expanded(
                                     child: TextFormField(
                                       controller: _nameController,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Customer Name *',
-                                        prefixIcon: Icon(Icons.person_outline),
+                                      decoration: InputDecoration(
+                                        labelText:
+                                            _orderType == OrderType.online
+                                            ? 'Customer Name *'
+                                            : 'Customer Name',
+                                        prefixIcon: const Icon(
+                                          Icons.person_outline,
+                                        ),
                                       ),
-                                      validator: (v) => v == null || v.isEmpty
-                                          ? 'Required'
+                                      validator: _orderType == OrderType.online
+                                          ? (v) => v == null || v.isEmpty
+                                                ? 'Required'
+                                                : null
                                           : null,
                                     ),
                                   ),
@@ -295,13 +345,20 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
                                   Expanded(
                                     child: TextFormField(
                                       controller: _phoneController,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Phone Number *',
-                                        prefixIcon: Icon(Icons.phone_outlined),
+                                      decoration: InputDecoration(
+                                        labelText:
+                                            _orderType == OrderType.online
+                                            ? 'Phone Number *'
+                                            : 'Phone Number',
+                                        prefixIcon: const Icon(
+                                          Icons.phone_outlined,
+                                        ),
                                       ),
                                       keyboardType: TextInputType.phone,
-                                      validator: (v) => v == null || v.isEmpty
-                                          ? 'Required'
+                                      validator: _orderType == OrderType.online
+                                          ? (v) => v == null || v.isEmpty
+                                                ? 'Required'
+                                                : null
                                           : null,
                                     ),
                                   ),
@@ -310,13 +367,20 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
                               const SizedBox(height: 16),
                               TextFormField(
                                 controller: _addressController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Delivery Address *',
-                                  prefixIcon: Icon(Icons.location_on_outlined),
+                                decoration: InputDecoration(
+                                  labelText: _orderType == OrderType.online
+                                      ? 'Delivery Address *'
+                                      : 'Address',
+                                  prefixIcon: const Icon(
+                                    Icons.location_on_outlined,
+                                  ),
                                 ),
                                 maxLines: 2,
-                                validator: (v) =>
-                                    v == null || v.isEmpty ? 'Required' : null,
+                                validator: _orderType == OrderType.online
+                                    ? (v) => v == null || v.isEmpty
+                                          ? 'Required'
+                                          : null
+                                    : null,
                               ),
                             ],
                           )
@@ -324,34 +388,51 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
                             children: [
                               TextFormField(
                                 controller: _nameController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Customer Name *',
-                                  prefixIcon: Icon(Icons.person_outline),
+                                decoration: InputDecoration(
+                                  labelText: _orderType == OrderType.online
+                                      ? 'Customer Name *'
+                                      : 'Customer Name',
+                                  prefixIcon: const Icon(Icons.person_outline),
                                 ),
-                                validator: (v) =>
-                                    v == null || v.isEmpty ? 'Required' : null,
+                                validator: _orderType == OrderType.online
+                                    ? (v) => v == null || v.isEmpty
+                                          ? 'Required'
+                                          : null
+                                    : null,
                               ),
                               const SizedBox(height: 16),
                               TextFormField(
                                 controller: _phoneController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Phone Number *',
-                                  prefixIcon: Icon(Icons.phone_outlined),
+                                decoration: InputDecoration(
+                                  labelText: _orderType == OrderType.online
+                                      ? 'Phone Number *'
+                                      : 'Phone Number',
+                                  prefixIcon: const Icon(Icons.phone_outlined),
                                 ),
                                 keyboardType: TextInputType.phone,
-                                validator: (v) =>
-                                    v == null || v.isEmpty ? 'Required' : null,
+                                validator: _orderType == OrderType.online
+                                    ? (v) => v == null || v.isEmpty
+                                          ? 'Required'
+                                          : null
+                                    : null,
                               ),
                               const SizedBox(height: 16),
                               TextFormField(
                                 controller: _addressController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Delivery Address *',
-                                  prefixIcon: Icon(Icons.location_on_outlined),
+                                decoration: InputDecoration(
+                                  labelText: _orderType == OrderType.online
+                                      ? 'Delivery Address *'
+                                      : 'Address',
+                                  prefixIcon: const Icon(
+                                    Icons.location_on_outlined,
+                                  ),
                                 ),
                                 maxLines: 2,
-                                validator: (v) =>
-                                    v == null || v.isEmpty ? 'Required' : null,
+                                validator: _orderType == OrderType.online
+                                    ? (v) => v == null || v.isEmpty
+                                          ? 'Required'
+                                          : null
+                                    : null,
                               ),
                             ],
                           ),
